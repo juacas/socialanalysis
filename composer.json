@@ -1,0 +1,15 @@
+{
+    "name": "eduvalab/social-analysis",
+    "description": "Description of project SocialAnalysis.",
+    "authors": [
+        {
+            "name": "juacas",
+            "email": "jpdecastro@tel.uva.es"
+        }
+    ],
+    "require": {
+        "facebook/graph-sdk": "*",
+        "graphp/algorithms": "*",
+        "graphp/graphviz": "v0.2.1"
+    }
+}
