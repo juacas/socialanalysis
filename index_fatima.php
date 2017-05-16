@@ -4,6 +4,8 @@
         require_once 'matrix.php';
         require_once 'auxiliares.php';
         require_once 'centralidad.php';
+        require_once 'JPDijkstra.php';
+        //require_once 'index.php';
         
         
         $fb = new Facebook\Facebook([  
@@ -82,12 +84,13 @@
             }
             
             //centralidad_grado($members_array,$matriz_adyacencia,$vector_entrada, $vector_salida);
-            //create_Vertex($members);
+            create_graph($members,$matriz_adyacencia,$score);
+           
             //Obtengo el siguiente post
             $posts->next();
-            
           }
           
+          //create_graph($members,$matriz_adyacencia);
         } catch(Facebook\Exceptions\FacebookResponseException $e) {
           echo 'Graph returned an error: ' . $e->getMessage();
           exit;

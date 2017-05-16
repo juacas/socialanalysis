@@ -6,49 +6,42 @@
  * and open the template in the editor.
  */
 
-require_once 'vendor/autoload.php';
 require_once 'JPDijkstra.php';
+
+
 use \Fhaculty\Graph\Graph as Graph;
 use Graphp\GraphViz\Dot as Dot;
+
 $graph = new Graph();
-
-
-// create some cities
-$rome = $graph->createVertex('Rome');
-$madrid = $graph->createVertex('Madrid');
-$cologne = $graph->createVertex('Cologne');
-$paris = $graph->createVertex('Paris');
-
-// build some roads
-$cologne->createEdgeTo($madrid)->setWeight(1762);
-$madrid->createEdgeTo($rome)->setWeight(1956);
-$rome->createEdgeTo($madrid)->setWeight(1956);
-$cologne->createEdgeTo($paris)->setWeight(497);
-$rome->createEdgeTo($paris)->setWeight(1421);
-// create loop
-$rome->createEdgeTo($rome)->setWeight(25);
 $gv = new Graphp\GraphViz\GraphViz();
 $dot = new Dot($gv);
 
-echo $dot->getOutput($graph);
 
-$sp = new JPDijkstra($cologne);
-$edges=$sp->getEdges();
-$graph2 = $sp->createGraph();
-echo $dot->getOutput($graph2);
-$path = $sp->getWalkTo($rome);
-echo "IDs:".json_encode($path->getVertices()->getIds())."\n";
-$dmap=$sp->getDistanceMap();
-echo json_encode($dmap);
-//$ruta = $sp->getEdgesTo($madrid);
-//var_dump($ruta);
-
-/*
-foreach ($rome->getVerticesEdgeFrom() as $vertex) {
-    echo $vertex->getId().' leads to rome'.PHP_EOL;
-    // result: Madrid and Rome itself
+function create_graph($members, $matriz_adyacencia, $score){
+    
+    global $graph,$dot;
+    
+    
+    for($i=0; $i<sizeof($members); $i++){
+        
+      $nodos[$members[$i]['name']]= $graph->createVertex($members[$i]['name']);
+      //create loops for each node
+      $nodos[$members[$i]['name']]->createEdgeTo($nodos[$members[$i]['name']])->setWeight($score[$members[$i]['name']]);
+   
+    }
+    
+    for($i=0; $i<sizeof($members); $i++){
+        for($j=0; $j<sizeof($members); $j++){
+            if(isset($matriz_adyacencia[$members[$i]['name']][$members[$j]['name']])){
+                $nodos[$members[$j]['name']]->createEdgeTo($nodos[$members[$i]['name']])->setWeight($matriz_adyacencia[$members[$i]['name']][$members[$j]['name']]);
+            }
+        }
+    }
+     
+    echo $dot->getOutput($graph);
 }
-*/
+
+
 
 
 
