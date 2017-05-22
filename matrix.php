@@ -3,7 +3,21 @@
 require_once 'auxiliares.php';
 require_once 'matrix.php';
 
-
+/**
+ * 
+ * @param type $matriz_adyacencia
+ * @return array List of Nodes of the social graph
+ */
+function getNodes($matriz_adyacencia){
+    
+}
+/**
+ * 
+ * @param type $matriz_adjacencia
+ */
+function getEdges($matriz_adjacencia){
+    
+}
 // Funcion que contea y almacena la informacion de un post
     function actualize_data_post($post,&$score){
 

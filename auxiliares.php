@@ -18,6 +18,11 @@
     }
 
 //Funcion que devuelve el nombre de lo que le pasen    
+    /**
+     * TODO: Documentar bien y aclarar.
+     * @param type $in
+     * @return type
+     */
     function name($in){
               
         $author = $in->getField('from');
