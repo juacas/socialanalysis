@@ -1,4 +1,5 @@
 <?php
+
 /*
  * To change this license header, choose License Headers in Project Properties.
  * To change this template file, choose Tools | Templates
@@ -33,16 +34,15 @@ class SocialMatrix {
     }
 
     /**
-     * 
+     * Devuelve el grafico
      * @return Graph
      */
     function get_graph() {
         return $this->graph;
     }
 
-    //Funcion que crea el grafico a partir de un array de miembros
     /**
-     * 
+     * Crea un grafico a partir de un array de miembros
      * @param array $members_array
      */
     function generateSubGraph($members_array) {
@@ -61,44 +61,55 @@ class SocialMatrix {
         }
     }
 
+    /**
+     * Calcula la suma de pesos por el camino más corto de un miembro al resto de miembros 
+     * a los que esté conectado (cercania), y cuantas veces van apareciendo los "vertex" en el medio 
+     * de esos caminos (proximidad).
+     * @return \stdClass $results
+     */
     function calculateCentralities() {
 
-        global $dot;
+        //global $dot;
         $results = [];
-        //Grafico que muestra el camino mas corto desde un nodo al resto de la red
+
         foreach ($this->get_graph()->getVertices() as $member) {
 
+            //Obtiene el camino mas corto a cada uno de los vertex que esta conectado el miembro
             $sp = new JPDijkstra($member);
-            $graph2 = $sp->createGraph();
-            echo "\n" . $dot->getOutput($graph2);
-
-            // array que contiene la suma del camino mas corto de un nodo con cada nodo de la red que esta conectado
+            //$graph2 = $sp->createGraph();
+            //echo "\n" . $dot->getOutput($graph2);
+            //Array que contiene como clave los "ids" y como valor el "peso" total (por el camino mas corto)
+            //a cada uno de los "Vertex" que está conectado
             $dmap = $sp->getDistanceMap();
-            echo json_encode($dmap) . "\n";
-            //Funcion que calcula los indices de lejanía y cercania
-            list($dist_geod, $ind_cercania) = centralidad_cercania($this->get_graph(), $dmap, $member->getId());
+            //echo json_encode($dmap) . "\n";
+            //Calculo de la suma de todos los caminos a todos los vertices que está conectado
+            $ind_cercania = centralidad_cercania($this->get_graph(), $dmap);
             if (!isset($results[$member->getId()])) {
                 $results[$member->getId()] = new stdClass();
             }
             $results[$member->getId()]->cercania = $ind_cercania;
 
+            //Calculo de todos los "vertex" que están entre medias de los caminos mas cortos 
             $intermediacion_parcial = centralidad_intermediacion($this->get_graph(), $dmap, $sp);
             // añade a global
             foreach ($intermediacion_parcial as $key => $value) {
                 if (!isset($results[$key])) {
                     $results[$key] = new stdClass();
+                    $results[$key]->intermediacion = $value;
+                } else if (!isset($results[$key]->intermediacion)) {
+                    $results[$key]->intermediacion = $value;
+                } else {
+                    $results[$key]->intermediacion += $value;
                 }
-                $results[$key]->intermediacion += $value;
             }
         }
         return $results;
     }
 
-    //Funcion que crea los vertices del grafico
     /**
-     * 
+     * Crea los vertices del grafico
      * @param Graph $graph
-     * @param type $members_array
+     * @param array $members_array
      * @return array vertex
      */
     function create_vertex($graph, $members_array) {
@@ -111,9 +122,9 @@ class SocialMatrix {
         return $vertex;
     }
 
-    //Calculo de la centralidad de grado (grado de salida y de entrada)
     /**
-     * 
+     * Calcula el numero de interacciones hechas "de salida" o recibidas "de entrada" 
+     * para cada miembro del grupo
      * @param array $members_array
      * @return array
      */
@@ -131,7 +142,7 @@ class SocialMatrix {
             foreach ($members_array as $key2) {
                 $userid2 = useridfor($key2);
                 if (isset($this->matriz_adyacencia[$userid1][$userid2])) {
-                    $vector_entrada[$userid2] += $this->matriz_adyacencia[$userid1][$userid2];
+                    $vector_entrada[$userid1] += $this->matriz_adyacencia[$userid1][$userid2];
                 }
                 if (isset($this->matriz_adyacencia[$userid2][$userid1])) {
                     $vector_salida[$userid1] += $this->matriz_adyacencia[$userid2][$userid1];
@@ -141,9 +152,9 @@ class SocialMatrix {
         return [$vector_entrada, $vector_salida];
     }
 
-    //Funcion que actualiza el score de un determinado participante
     /**
-     * 
+     * Actualiza la puntuación individual o "score" de cada participante a través de los Posts
+     * Repalys, o Rereplays que escribe y de las "Reactions" y/o "Likes" que pueda recibir en ellos. 
      * @param string $member
      * @param float $addscore
      */
@@ -151,9 +162,9 @@ class SocialMatrix {
         $this->score[$member] += $addscore;
     }
 
-    //Funcion que registra una interaccion entre dos miembros
     /**
-     * 
+     * Funcion que registra una interaccion entre dos miembros, creando los "Vertex" y/o los "Edges"
+     * en caso de no exitir, y en caso contrario actualiza el "Weight" del edge en cuestion.
      * @param string $from
      * @param string $to
      * @param type $type
@@ -186,5 +197,54 @@ class SocialMatrix {
         }
         $edge->setWeight($edge->getWeight() + 1);
     }
-
+    /**
+     * Calcula lo cercano que está un miembro del resto de miembros a los que está unido
+     * @param \Fhaculty\Graph\Graph $graph
+     * @param array $dmap
+     * @return int $indice_cercania
+     */
+    function centralidad_cercania($graph, $dmap) {
+        
+        // Obtengo la suma geodestica de cada nodo al resto de la red
+        $suma_geodestica = 0;
+        
+        foreach ($dmap as $value) {
+            
+            $suma_geodestica += $value;
+        }
+        
+        if ($suma_geodestica == 0) {
+            $indice_cercania = 0;
+        } else {
+            $indice_cercania = (($graph->getVertices()->count()) - 1 / $suma_geodestica) * 100;
+        }
+        
+        //echo "\n".$suma_geodestica."\n";
+        //echo "\n".$indice_cercania."\n";
+        return $indice_cercania;
+    }
+    
+    /**
+     * Devolver la lista de members que están en algún Path y actualizar su contador cada vez que ocurra
+     * @param \Fhaculty\Graph\Graph $graph
+     * @param array $dmap
+     * @param JPDijkstra $sp
+     * @return array $indice_proximidad
+     */
+    function centralidad_intermediacion($graph, $dmap, $sp) {
+        
+        // Obtengo los nodos por los que pasa en el camino mas corto a cada uno de los que está conectado
+        $indice_proximidad = array();
+        
+        foreach ($dmap as $key => $value) {
+            $vertex = $graph->getVertex($key);
+            $path = $sp->getWalkTo($vertex);
+            $ids = $path->getVertices()->getIds();
+            for ($i = 1; $i < count($ids) - 1; $i++) {
+                $indice_proximidad[$ids[$i]] = isset($indice_proximidad[$ids[$i]]) ? $indice_proximidad[$ids[$i]] + 1 : 1;
+            }
+        }
+        return $indice_proximidad;
+    }
+    
 }

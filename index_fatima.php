@@ -1,4 +1,5 @@
 <?php
+
 require_once 'vendor/autoload.php';
 require_once 'graphlib.php';
 require_once 'matrix.php';
@@ -45,8 +46,8 @@ try {
     $posts = $feednode->getIterator();
 
     //Creo una objeto de tipo SocialMatrix
-    $matrix = new SocialMatrix($members);
-
+    //$matrix = new SocialMatrix($members);
+    $matrix = new DataBaseMatrix(); 
     // Comienza el bucle que recorrera todos los post del grupo
     while ($posts->valid()) {
 
@@ -56,13 +57,13 @@ try {
         /* @var $comments Facebook\GraphNodes\GraphEdge */
         $comments = $post->getField('comments');
 
-        actualize_data_post($matrix, $post);
+        get_post($matrix, $post);
 
         $i = 0;
 
         while ($i < sizeof($comments)) {
 
-            actualize_data_main_comment($comments[$i], $post, $matrix);
+            get_main_comment($comments[$i], $post, $matrix);
 
             /* @var $comments_2 Facebook\GraphNodes\GraphEdge */
             $comments_2 = $comments[$i]->getField('comments');
@@ -71,7 +72,7 @@ try {
 
             while ($j < sizeof($comments_2)) {
 
-                actualize_data_second_comment($comments_2[$j], $comments[$i], $post, $matrix);
+                get_second_comment($comments_2[$j], $comments[$i], $post, $matrix);
                 $j++;
             }
             $i++;
@@ -80,17 +81,6 @@ try {
         //Obtengo el siguiente post
         $posts->next();
     }
-
-
-
-    list($vector_entrada, $vector_salida) = $matrix->centralidad_grado($members);
-
-    $dot = new Dot();
-    echo $dot->getOutput($matrix->get_graph());
-
-    $exporter = new es\uva\eduvalab\JSONExporter();
-    echo $exporter->getOutput($matrix->get_graph());
-    
 } catch (Facebook\Exceptions\FacebookResponseException $e) {
     echo 'Graph returned an error: ' . $e->getMessage();
     exit;
@@ -98,7 +88,25 @@ try {
     echo 'Facebook SDK returned an error: ' . $e->getMessage();
     exit;
 }
-       
+
+// Fase de análisis
+
+// TODO: Lectura de interactions de la base datos
+$interactions=[];
+$matrix = new SocialMatrix($members);
+foreach ($interactions as $interaction){
+    $matrix->registerInteraction($interaction->from, $interaction->to, $interaction->type);
+}
+
+    list($vector_entrada, $vector_salida) = $matrix->centralidad_grado($members);
+
+    $dot = new Dot();
+    echo $dot->getOutput($matrix->get_graph());
+    $results = $matrix->calculateCentralities();
+
+    $exporter = new es\uva\eduvalab\JSONExporter();
+    echo $exporter->getOutput($matrix->get_graph());
+
        
         
         
