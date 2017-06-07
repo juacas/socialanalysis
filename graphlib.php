@@ -83,7 +83,7 @@ class SocialMatrix {
             $dmap = $sp->getDistanceMap();
             //echo json_encode($dmap) . "\n";
             //Calculo de la suma de todos los caminos a todos los vertices que está conectado
-            $ind_cercania = centralidad_cercania($this->get_graph(), $dmap);
+            $ind_cercania = $this->centralidad_cercania( $dmap);
             if (!isset($results[$member->getId()])) {
                 $results[$member->getId()] = new stdClass();
             }
@@ -164,7 +164,7 @@ class SocialMatrix {
 
     /**
      * Funcion que registra una interaccion entre dos miembros, creando los "Vertex" y/o los "Edges"
-     * en caso de no exitir, y en caso contrario actualiza el "Weight" del edge en cuestion.
+     * en caso de no exitir, 
      * @param string $from
      * @param string $to
      * @param type $type
@@ -189,13 +189,8 @@ class SocialMatrix {
             $toVertex = $this->graph->getVertex($to);
         }
 
-        $edges = $fromVertex->getEdgesTo($toVertex);
-        if (count($edges) > 0) {
-            $edge = $edges->getEdgeFirst();
-        } else {
-            $edge = $fromVertex->createEdgeTo($toVertex);
-        }
-        $edge->setWeight($edge->getWeight() + 1);
+        $edge = $fromVertex->createEdgeTo($toVertex);
+        $edge->setAttribute('type', $type);
     }
     /**
      * Calcula lo cercano que está un miembro del resto de miembros a los que está unido
@@ -203,22 +198,23 @@ class SocialMatrix {
      * @param array $dmap
      * @return int $indice_cercania
      */
-    function centralidad_cercania($graph, $dmap) {
+    function centralidad_cercania( $dmap) {
         
         // Obtengo la suma geodestica de cada nodo al resto de la red
-        $suma_geodestica = 0;
+        $suma_geodesica = 0;
         
         foreach ($dmap as $value) {
-            
-            $suma_geodestica += $value;
+            $suma_geodesica += $value;
         }
-        
-        if ($suma_geodestica == 0) {
+        // Add distance to unaccesible nodes
+        $total = count($this->graph->getVertices());
+        $accesible = count($dmap);
+        $suma_geodesica += ($total-$accesible)*($total*100); 
+        if ($suma_geodesica == 0) {
             $indice_cercania = 0;
         } else {
-            $indice_cercania = (($graph->getVertices()->count()) - 1 / $suma_geodestica) * 100;
+            $indice_cercania = (($total - 1) / $suma_geodesica);
         }
-        
         //echo "\n".$suma_geodestica."\n";
         //echo "\n".$indice_cercania."\n";
         return $indice_cercania;
@@ -231,13 +227,13 @@ class SocialMatrix {
      * @param JPDijkstra $sp
      * @return array $indice_proximidad
      */
-    function centralidad_intermediacion($graph, $dmap, $sp) {
+    function centralidad_intermediacion($dmap, $sp) {
         
         // Obtengo los nodos por los que pasa en el camino mas corto a cada uno de los que está conectado
         $indice_proximidad = array();
         
         foreach ($dmap as $key => $value) {
-            $vertex = $graph->getVertex($key);
+            $vertex = $this->graph->getVertex($key);
             $path = $sp->getWalkTo($vertex);
             $ids = $path->getVertices()->getIds();
             for ($i = 1; $i < count($ids) - 1; $i++) {
